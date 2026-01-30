@@ -5,8 +5,8 @@
                 "dataSource": "gem5-vision",
                 "database": "gem5-vision",
                 "collection": "resources",
-                "url": "https://api.gem5.org/api/resources",
-                "isMongo": true
+                "url": "resources.json",
+                "isMongo": false
             }
         }
     },

@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.git
+*.md
+.gitignore
+.eslintrc.json
+docker-compose.yml
+Dockerfile
