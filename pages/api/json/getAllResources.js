@@ -12,12 +12,14 @@ export default async function getAllResourcesJSON(database) {
     const res = await fetch(
       url,
     ).then((res) => res.json());
+    if (res.resources) return res.resources;
     return res;
   }
   else {
     try {
       const path = process.env.BASE_PATH + '/' + url;
       const json = await fetch(path).then((res) => res.json());
+      if (json.resources) return json.resources;
       return json;
     } catch (error) {
       return [];

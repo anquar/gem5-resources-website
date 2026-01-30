@@ -55,21 +55,45 @@ function damerauLevenshteinDistance(a, b) {
  * @returns {Array} - An array containing two elements: an array of filtered and sorted resources, and the total number of resources.
  */
 export default async function getResourcesByQueryJSON(queryObject, currentPage, pageSize, database) {
-  const resources = await getAllResourcesJSON(database);
-  const query = queryObject.query.trim();
+  const resourcesRaw = await getAllResourcesJSON(database);
+  
+  // Flatten and polyfill resources
+  const resources = [];
+  function flatten(list) {
+      if (!list || !Array.isArray(list)) return;
+      for (let r of list) {
+          // Clone to protect original data if needed, but shallow copy is usually enough here
+          // But we are modifying r.id, so be careful. 
+          // Since getAllResourcesJSON fetches fresh data each time (no cache), it's fine.
+          if (!r.id && r.name) r.id = r.name;
+          
+          resources.push(r);
+          if (r.contents) flatten(r.contents);
+      }
+  }
+  flatten(resourcesRaw);
+
+  const query = queryObject.query ? queryObject.query.trim() : "";
   const keywords = query.split(" ");
+  
   let results = resources.filter((resource) => {
+    // Safety check for ID
+    const resId = (resource.id || "").toLowerCase();
+    
     let idMatches = keywords.filter((keyword) =>
-      resource.id.toLowerCase().includes(keyword.toLowerCase())
+      resId.includes(keyword.toLowerCase())
     ).length;
 
     let tagMatches = keywords.filter((keyword) => {
       return resource.tags ? resource.tags.includes(keyword.toLowerCase()) : false;
     }).length;
 
+    // Safety check for description
+    const resDesc = (resource.description || "").toLowerCase();
     let descMatches = keywords.filter((keyword) =>
-      resource.description.toLowerCase().includes(keyword.toLowerCase())
+      resDesc.includes(keyword.toLowerCase())
     ).length;
+    
     let resMatches = 0;
     if (resource.resources) {
       // only search if resource.resources exists
@@ -79,12 +103,12 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
       ).length;
     }
     let totalMatches = idMatches + descMatches + resMatches + tagMatches;
-    if (totalMatches === 0) {
+    
+    if (totalMatches === 0 && resId.length > 0) {
       let idDistances = keywords.map((keyword) => {
         const keywordLower = keyword.toLowerCase();
         return Math.min(
-          ...resource.id
-            .toLowerCase()
+          ...resId
             .split("-")
             .map((idPart) => damerauLevenshteinDistance(keywordLower, idPart))
         );
@@ -101,10 +125,16 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
       totalMatches = idMatches + descMatches + resMatches;
     }
     resource["totalMatches"] = totalMatches;
-    resource["score"] = query === resource['id'] ? 90 : (idMatches * 2 + descMatches + resMatches / 5) * 7;
+    // Safety check for score calculation
+    resource["score"] = query === resource.id ? 90 : (idMatches * 2 + descMatches + resMatches / 5) * 7;
     return totalMatches > 0;
   });
+
   results.forEach((resource) => {
+    if (!resource.gem5_versions || resource.gem5_versions.length === 0) {
+        resource.ver_latest = '0.0.0';
+        return;
+    }
     let aVersion = resource.gem5_versions[0];
     for (let version in resource.gem5_versions) {
       if (compareVersions(resource.gem5_versions[version], aVersion) > 0) {
@@ -113,6 +143,7 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
     }
     resource.ver_latest = aVersion;
   });
+
   for (let filter in queryObject) {
     if (filter === "tags") {
       results = results.filter((resource) => {
@@ -128,6 +159,7 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
       results = results.filter((resource) => {
         for (let version in queryObject[filter]) {
           // check if the version exists in the resource
+          if (!resource.gem5_versions) continue;
           for (let gem5Version in resource.gem5_versions) {
             if (
               resource.gem5_versions[gem5Version] ===
@@ -145,6 +177,7 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
       );
     }
   }
+
   // remove duplicate ids and keep the one with the highest ver_latest
   let tempResults = results;
   results = [];
@@ -153,7 +186,8 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
     for (let j = 0; j < results.length; j++) {
       if (tempResults[i].id === results[j].id) {
         found = true;
-        if (compareVersions(tempResults[i].resource_version, results[j].resource_version) > 0) {
+        // Safety check for resource_version
+        if (compareVersions(tempResults[i].resource_version || '0.0.0', results[j].resource_version || '0.0.0') > 0) {
           results[j] = tempResults[i];
         }
       }
@@ -162,29 +196,18 @@ export default async function getResourcesByQueryJSON(queryObject, currentPage, 
       results.push(tempResults[i]);
     }
   }
-  /* for (let i = 0; i < tempResults.length; i++) {
-    for (let j = i + 1; j < tempResults.length; j++) {
-      if (tempResults[i].id === tempResults[j].id) {
-        if (compareVersions(tempResults[i].resource_version, tempResults[j].resource_version) >= 0) {
-          results.splice(j, 1);
-        } else {
-          results.splice(i, 1);
-        }
-      }
-    }
-  } */
 
   if (queryObject.sort) {
     switch (queryObject.sort) {
       case "id_asc":
-        results = results.sort((a, b) => a.id.localeCompare(b.id));
+        results = results.sort((a, b) => (a.id || "").localeCompare(b.id || ""));
         break;
       case "id_desc":
-        results = results.sort((a, b) => b.id.localeCompare(a.id));
+        results = results.sort((a, b) => (b.id || "").localeCompare(a.id || ""));
         break;
       case "version":
         results = results.sort((a, b) => {
-          return compareVersions(b.ver_latest, a.ver_latest);
+          return compareVersions(b.ver_latest || '0.0.0', a.ver_latest || '0.0.0');
         });
         break;
       default:

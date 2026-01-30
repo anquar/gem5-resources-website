@@ -52,14 +52,14 @@ function VersionComponent({ version }) {
             </td>
             <td className={`${styles.versions_td} main-text-regular`}>
                 {
-                    version.gem5_versions.sort().map((v, index) => {
+                    (version.gem5_versions && version.gem5_versions.length > 0) ? version.gem5_versions.sort().map((v, index) => {
                         return (
                             <Link href={'/resources?q=gem5_versions%3A' + v} className="interactDecoration" key={index}>
                                 {v}
                                 {index < version.gem5_versions.length - 1 ? ', ' : ''}
                             </Link>
                         )
-                    })
+                    }) : 'None'
                 }
             </td>
 
@@ -122,7 +122,11 @@ export default function VersionTab({ id, database }) {
 
     useEffect(() => {
         getVersionsByID(id, database).then((data) => {
-            setVersions(data)
+            if (Array.isArray(data)) {
+                setVersions(data)
+            } else {
+                setVersions([])
+            }
         })
     }, [id, database])
 

@@ -72,7 +72,7 @@ export default function MetaData({ resource, className, metaFields, showMetadata
                     <Row className="border-bottom">
                         <p className="text-muted main-text-regular">Author</p>
                         <h4 className="primary main-text-title-bold">
-                            {resource.author.length > 0 ? resource.author.map((author, index) => {
+                            {resource.author && resource.author.length > 0 ? resource.author.map((author, index) => {
                                 return (
                                     <span key={index}>
                                         {author}

@@ -133,17 +133,21 @@ export default function ResourceTab({ resource, requiredTabs, additionalInfoTabs
         className="mb-2 main-text-regular"
       >
         <Tab eventKey="readme" title="Readme">
-          <ReactMarkdown
-            className="markdown-body mt-3"
-            rehypePlugins={[
-              [rehypeHighlight, { ignoreMissing: true }],
-              rehypeRaw,
-              rehypeSlug,
-            ]}
-            remarkPlugins={[remarkGfm, remarkToc, remarkFrontmatter]}
-          >
-            {resource.description ?? 'This is a description of the resource.'}
-          </ReactMarkdown>
+          {resource.source_url ?
+            <ReadmeTab github_url={resource.source_url} />
+            :
+            <ReactMarkdown
+              className="markdown-body mt-3"
+              rehypePlugins={[
+                [rehypeHighlight, { ignoreMissing: true }],
+                rehypeRaw,
+                rehypeSlug,
+              ]}
+              remarkPlugins={[remarkGfm, remarkToc, remarkFrontmatter]}
+            >
+              {resource.description ?? 'This is a description of the resource.'}
+            </ReactMarkdown>
+          }
         </Tab>
         <Tab eventKey="changelog" title="Changelog">
           <ChangelogTab github_url={resource.source_url} />

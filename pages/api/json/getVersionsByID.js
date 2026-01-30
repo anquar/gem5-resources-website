@@ -13,14 +13,36 @@ import compareVersions from "../compareVersions";
  */
 export default async function getVersionsByIDJSON(id, database) {
     const resources = await getAllResourcesJSON(database);
-    // filter json file to find the resources that contain the query in their id
-    let results = resources.filter(resource => resource.id === id);
+    
+    // We need to search recursively for nested resources
+    const results = [];
+    function findRecursive(list) {
+        if (!list || !Array.isArray(list)) return;
+        for (const resource of list) {
+            // Check both id and name
+            if ((resource.id === id) || (resource.name === id)) {
+                results.push(resource);
+            }
+            if (resource.contents) {
+                findRecursive(resource.contents);
+            }
+        }
+    }
+    findRecursive(resources);
+
     if (results.length === 0) {
         return { error: 'Resource not found' }
     }
     results.forEach((result) => {
         result.database = database;
+        // Polyfill ID if missing
+        if (!result.id && result.name) {
+            result.id = result.name;
+        }
     });
-    results.sort((a, b) => -compareVersions(a.resource_version, b.resource_version));
+    
+    // Sort only if versions exist. If no version, treat as 0.0.0 or similar to avoid crash.
+    results.sort((a, b) => -compareVersions(a.resource_version || '0.0.0', b.resource_version || '0.0.0'));
+    
     return results;
 }

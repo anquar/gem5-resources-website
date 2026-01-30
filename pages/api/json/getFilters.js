@@ -8,24 +8,22 @@ import getAllResourcesJSON from "./getAllResources";
 */
 export default async function getFiltersJSON(database) {
     const resources = await getAllResourcesJSON(database);
+    
     // get unique categories from resources
-    let categories = [...new Set(resources.map(resource => resource.category))];
-    let architectures = [...new Set(resources.map(resource => resource.architecture))];
-    // remove null values
-    architectures = architectures.filter(architecture => architecture != null);
+    // Filter out null/undefined values
+    let categories = [...new Set(resources.map(resource => resource.category).filter(c => c))];
+    let architectures = [...new Set(resources.map(resource => resource.architecture).filter(a => a))];
 
-    let versions = [];
-    for (let i = 0; i < resources.length; i++) {
-        for (let j = 0; j < resources[i].gem5_versions.length; j++) {
-            if (!versions.includes(resources[i].gem5_versions[j])) {
-                versions.push(resources[i].gem5_versions[j]);
-            }
+    let versions = new Set();
+    for (const resource of resources) {
+        if (resource.gem5_versions && Array.isArray(resource.gem5_versions)) {
+            resource.gem5_versions.forEach(v => versions.add(v));
         }
     }
 
     return {
         category: categories,
         architecture: architectures,
-        gem5_versions: versions
+        gem5_versions: Array.from(versions)
     };
 }

@@ -127,7 +127,7 @@ export default function Banner({ resource, setShowMetadata }) {
                             TAGS
                         </h6>
                         {
-                            resource.tags.length > 0 ? resource.tags.map((tag, index) => {
+                            resource.tags && resource.tags.length > 0 ? resource.tags.map((tag, index) => {
                                 return (
                                     <Link key={tag}
                                         href={'/resources?q=tags:' + tag}

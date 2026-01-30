@@ -41,7 +41,7 @@ export default function Custom404() {
                 </h1>
                 <p>The page you are looking for does not seem to exist.</p>
                 <Link href="/" passHref>
-                    <Button variant="outline-primary" as="Link">Go back to home</Button>
+                    <Button variant="outline-primary">Go back to home</Button>
                 </Link>
             </Container>
         return <Resource />
